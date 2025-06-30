@@ -13,7 +13,7 @@ def generate_summary(added, removed):
         added_section = (
             "Write a clever and engaging summary about these *new whiskeys* as if it's a mixtape just dropped. Use emojis and cool slang. Keep it fun and simple. Must include price.\n\n"
             "### New Whiskeys:\n"
-            f"{added[['CODE', 'Brand', 'Proof', 'List Price']].head(5).to_string(index=False)}"
+            f"{added[['CODE', 'Brand', 'Proof', 'List Price', 'Category']].head(5).to_string(index=False)}"
         )
 
     if not removed.empty:
@@ -21,7 +21,7 @@ def generate_summary(added, removed):
         removed_section = (
             "Write a heartfelt eulogy for these *discontinued whiskeys*. Make it poetic and nostalgic.\n\n"
             "### Discontinued Whiskeys:\n"
-            f"{removed[['CODE', 'Brand', 'Proof', 'List Price']].head(5).to_string(index=False)}"
+            f"{removed[['CODE', 'Brand', 'Proof', 'List Price', 'Category']].head(5).to_string(index=False)}"
         )
 
     responses = []

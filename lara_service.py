@@ -97,41 +97,41 @@ def parse_and_clean_excel(file_path):
 
     if header_row_idx is None:
         logging.warning("Header row not found.")
-        logging.warning("Could not find header row. Showing first 10 rows for debugging:")
-        logging.warning(df_raw.head(10).to_string())
         return pd.DataFrame()
 
-    df = pd.read_excel(file_path, header=header_row_idx)
-    df.columns = df.columns.astype(str).str.strip()
-    logging.info(f"Parsed columns: {df.columns.tolist()}")
+    columns = df_raw.iloc[header_row_idx].astype(str).str.strip()
+    data_rows = df_raw.iloc[header_row_idx + 1:].reset_index(drop=True)
 
-    required_columns = ['LIQUOR', 'BRAND NAME', 'PROOF', 'LICENSEE', 'ADA']
-    for col in required_columns:
-        if col not in df.columns:
-            logging.warning(f"Required column '{col}' not found in parsed DataFrame.")
-            return pd.DataFrame()
+    current_category = None
+    parsed_rows = []
 
-    df = df[df['LIQUOR'].notna() & df['LIQUOR'].astype(str).str.isdigit()]
+    for _, row in data_rows.iterrows():
+        row_clean = row.dropna().astype(str).str.strip().tolist()
 
-    # Backfill category
-    categories = []
-    for idx in df.index:
-        raw_row_idx = header_row_idx + 1 + (idx - df.index[0])
-        candidates = df_raw.loc[max(0, raw_row_idx-5):raw_row_idx, 0].dropna().astype(str).str.strip()
-        candidates = candidates[candidates.str.match(r'^[A-Z\s/&]+$', na=False) & ~candidates.str.contains("LIQUOR")]
-        category = candidates.iloc[-1] if not candidates.empty else None
-        categories.append(category)
+        if not row_clean:
+            continue
 
-    df['Category'] = categories
-    df['Date Added'] = date_added.strftime('%Y-%m-%d')
+        # A category row has 1 non-numeric text value and no headers
+        if len(row_clean) == 1 and re.match(r'^[A-Z\s/&\-]+$', row_clean[0], re.IGNORECASE):
+            current_category = row_clean[0]
+            continue
 
-    df['CODE'] = df['LIQUOR'].astype(str).str.strip()
-    df['Brand'] = df['BRAND NAME'].astype(str).str.strip()
-    df['Proof'] = pd.to_numeric(df['PROOF'], errors='coerce')
-    df['List Price'] = pd.to_numeric(df['LICENSEE'], errors='coerce')
-    df['ADA'] = df['ADA'].astype(str).str.strip()
+        try:
+            row_dict = dict(zip(columns, row.tolist()))
+            if str(row_dict.get("LIQUOR", "")).strip().isdigit():
+                parsed_rows.append({
+                    "CODE": str(row_dict.get("LIQUOR", "")).strip(),
+                    "Brand": str(row_dict.get("BRAND NAME", "")).strip(),
+                    "Proof": pd.to_numeric(row_dict.get("PROOF", None), errors='coerce'),
+                    "List Price": pd.to_numeric(row_dict.get("LICENSEE", None), errors='coerce'),
+                    "ADA": str(row_dict.get("ADA", "")).strip(),
+                    "Category": current_category,
+                    "Date Added": date_added.strftime('%Y-%m-%d')
+                })
+        except Exception as e:
+            continue
 
-    return df[['CODE', 'Brand', 'Proof', 'List Price', 'ADA', 'Category', 'Date Added']]
+    return pd.DataFrame(parsed_rows)
 
 def compare_to_master(new_file):
     new_df = parse_and_clean_excel(new_file)
