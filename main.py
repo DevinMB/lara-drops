@@ -1,3 +1,4 @@
+import os
 import logging
 import sys
 from dotenv import load_dotenv
@@ -13,9 +14,8 @@ from lara_service import (
 from ai_service import generate_summary
 from telegram_bot_service import send_telegram
 
-# Environment and Logging Setup
 load_dotenv()
-APP_NAME = "whiskey_bot"
+APP_NAME = os.getenv("APP_NAME")
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -45,9 +45,10 @@ def main():
             logging.info("No changes detected.")
             continue
 
-        # Optional: enrich added rows with descriptors via descriptor_service here
         logging.info(f"Adds: {added}")
         logging.info(f"Removes: {removed}")
+        # TODO: add descriptions to objects
+        # additionalInfo = generate_descriptions()
         summary = generate_summary(added, removed)
         if summary:
             logging.info("Generated summary from Ollama.")
