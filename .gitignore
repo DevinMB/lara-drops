@@ -2,3 +2,4 @@
 /downloads
 master_list.xlsx
 seen_links.json
+/__pycache__
